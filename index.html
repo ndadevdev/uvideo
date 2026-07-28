@@ -15,22 +15,10 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #000;
+            background: #f5f5f0;
             min-height: 100vh;
-            color: #fff;
+            color: #1a1a1a;
             overflow-x: hidden;
-        }
-
-        .noise {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            opacity: 0.03;
-            z-index: 100;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
         }
 
         .grid-bg {
@@ -40,25 +28,26 @@
             width: 100%;
             height: 100%;
             background-image: 
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+                linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
             background-size: 50px 50px;
             pointer-events: none;
         }
 
-        .glow-line {
+        .scan-line {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #00ff88, transparent);
-            animation: scan 4s linear infinite;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #2563eb, transparent);
+            animation: scan 6s linear infinite;
+            opacity: 0.6;
         }
 
         @keyframes scan {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(100vh); opacity: 0; }
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
         }
 
         .container {
@@ -74,22 +63,27 @@
 
         .header {
             text-align: center;
-            margin-bottom: 60px;
+            margin-bottom: 48px;
         }
 
         .logo {
             font-family: 'Space Mono', monospace;
-            font-size: 72px;
+            font-size: 64px;
             font-weight: 700;
-            letter-spacing: -3px;
+            letter-spacing: -2px;
             line-height: 1;
             margin-bottom: 8px;
-            position: relative;
+            color: #1a1a1a;
+        }
+
+        .logo em {
+            font-style: normal;
+            color: #2563eb;
         }
 
         .logo::after {
             content: '_';
-            color: #00ff88;
+            color: #2563eb;
             animation: blink 1s step-end infinite;
         }
 
@@ -99,35 +93,34 @@
 
         .tagline {
             font-family: 'Space Mono', monospace;
-            font-size: 14px;
-            color: #444;
-            letter-spacing: 4px;
+            font-size: 13px;
+            color: #888;
+            letter-spacing: 3px;
             text-transform: uppercase;
         }
 
         .main-box {
             width: 100%;
-            max-width: 600px;
-            position: relative;
+            max-width: 580px;
         }
 
         .input-wrapper {
-            position: relative;
-            background: #0a0a0a;
-            border: 1px solid #222;
-            padding: 4px;
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            padding: 6px;
             display: flex;
-            gap: 4px;
+            gap: 6px;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .input-wrapper:focus-within {
-            border-color: #00ff88;
-            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+            border-color: #2563eb;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
         }
 
         .prefix {
             font-family: 'Space Mono', monospace;
-            color: #00ff88;
+            color: #2563eb;
             padding: 12px 0 12px 16px;
             font-size: 14px;
             user-select: none;
@@ -137,7 +130,7 @@
             flex: 1;
             background: transparent;
             border: none;
-            color: #fff;
+            color: #1a1a1a;
             font-family: 'Space Mono', monospace;
             font-size: 14px;
             padding: 12px;
@@ -145,55 +138,61 @@
         }
 
         input[type="text"]::placeholder {
-            color: #333;
+            color: #aaa;
+        }
+
+        .btn-paste {
+            font-family: 'Space Mono', monospace;
+            padding: 12px 16px;
+            background: #e5e5e5;
+            color: #555;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-paste:hover {
+            background: #d4d4d4;
+        }
+
+        .btn-paste svg {
+            width: 16px;
+            height: 16px;
         }
 
         .btn {
             font-family: 'Space Mono', monospace;
             padding: 12px 24px;
-            background: #00ff88;
-            color: #000;
+            background: #2563eb;
+            color: #fff;
             border: none;
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 1px;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s;
-        }
-
-        .btn:hover::before {
-            left: 100%;
+            transition: background 0.2s, transform 0.1s;
         }
 
         .btn:hover {
-            background: #00cc6a;
+            background: #1d4ed8;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
         }
 
         .btn:disabled {
-            background: #1a1a1a;
-            color: #444;
+            background: #ccc;
+            color: #888;
             cursor: wait;
         }
 
-        .btn:disabled::before {
-            display: none;
-        }
-
-        /* Progress Section */
+        /* Progress */
         .progress-section {
             margin-top: 20px;
             display: none;
@@ -220,43 +219,22 @@
         }
 
         .progress-percent {
-            color: #00ff88;
+            color: #2563eb;
             font-weight: 700;
         }
 
         .progress-bar-bg {
             width: 100%;
-            height: 6px;
-            background: #1a1a1a;
-            position: relative;
+            height: 8px;
+            background: #e5e5e5;
             overflow: hidden;
         }
 
         .progress-bar {
             height: 100%;
-            background: #00ff88;
+            background: #2563eb;
             width: 0%;
             transition: width 0.3s ease;
-            position: relative;
-        }
-
-        .progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, 
-                transparent 0%, 
-                rgba(255,255,255,0.4) 50%, 
-                transparent 100%);
-            animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
         }
 
         .progress-info {
@@ -264,19 +242,19 @@
             justify-content: space-between;
             font-family: 'Space Mono', monospace;
             font-size: 11px;
-            color: #444;
+            color: #888;
             margin-top: 8px;
         }
 
         .progress-speed {
-            color: #00ff88;
+            color: #2563eb;
         }
 
-        /* Log Output */
+        /* Log */
         .log-output {
             margin-top: 16px;
-            background: #0a0a0a;
-            border: 1px solid #222;
+            background: #fff;
+            border: 1px solid #e0e0e0;
             padding: 16px;
             font-family: 'Space Mono', monospace;
             font-size: 12px;
@@ -295,7 +273,7 @@
         }
 
         .log-line .time {
-            color: #333;
+            color: #bbb;
         }
 
         .log-line .msg {
@@ -303,19 +281,19 @@
         }
 
         .log-line .msg.ok {
-            color: #00ff88;
+            color: #16a34a;
         }
 
         .log-line .msg.err {
-            color: #ff3333;
+            color: #dc2626;
         }
 
         .log-line .msg.info {
-            color: #4fc3f7;
+            color: #2563eb;
         }
 
         .log-line .msg.warn {
-            color: #ffaa00;
+            color: #d97706;
         }
 
         /* Status */
@@ -324,8 +302,8 @@
             font-family: 'Space Mono', monospace;
             font-size: 13px;
             padding: 16px;
-            background: #0a0a0a;
-            border: 1px solid #222;
+            background: #fff;
+            border: 1px solid #e0e0e0;
             display: none;
         }
 
@@ -334,13 +312,13 @@
         }
 
         .status.ok {
-            border-color: #00ff88;
-            color: #00ff88;
+            border-color: #16a34a;
+            color: #16a34a;
         }
 
         .status.err {
-            border-color: #ff3333;
-            color: #ff3333;
+            border-color: #dc2626;
+            color: #dc2626;
         }
 
         .cursor-blink {
@@ -349,8 +327,6 @@
 
         .stats {
             margin-top: 40px;
-            display: flex;
-            gap: 40px;
             font-family: 'Space Mono', monospace;
         }
 
@@ -361,12 +337,12 @@
         .stat-value {
             font-size: 24px;
             font-weight: 700;
-            color: #00ff88;
+            color: #2563eb;
         }
 
         .stat-label {
             font-size: 11px;
-            color: #444;
+            color: #888;
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-top: 4px;
@@ -380,19 +356,20 @@
             text-align: center;
             font-family: 'Space Mono', monospace;
             font-size: 11px;
-            color: #333;
+            color: #bbb;
             letter-spacing: 2px;
         }
 
-        .footer span {
-            color: #00ff88;
+        .footer em {
+            font-style: normal;
+            color: #2563eb;
         }
 
         .corner {
             position: fixed;
             width: 20px;
             height: 20px;
-            border-color: #222;
+            border-color: #ddd;
             border-style: solid;
             border-width: 0;
         }
@@ -402,24 +379,22 @@
         .corner.bl { bottom: 20px; left: 20px; border-bottom-width: 1px; border-left-width: 1px; }
         .corner.br { bottom: 20px; right: 20px; border-bottom-width: 1px; border-right-width: 1px; }
 
-        /* Scrollbar */
         ::-webkit-scrollbar {
             width: 4px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #0a0a0a;
+            background: transparent;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #333;
+            background: #ddd;
         }
     </style>
 </head>
 <body>
-    <div class="noise"></div>
     <div class="grid-bg"></div>
-    <div class="glow-line"></div>
+    <div class="scan-line"></div>
 
     <div class="corner tl"></div>
     <div class="corner tr"></div>
@@ -428,7 +403,7 @@
 
     <div class="container">
         <div class="header">
-            <div class="logo">uVideo</div>
+            <div class="logo">u<em>Video</em></div>
             <div class="tagline">video downloader</div>
         </div>
 
@@ -436,10 +411,13 @@
             <div class="input-wrapper">
                 <span class="prefix">~$</span>
                 <input type="text" id="url" placeholder="paste url video disini..." autocomplete="off" spellcheck="false">
+                <button class="btn-paste" id="btn-paste" type="button" title="Paste dari clipboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                    paste
+                </button>
                 <button class="btn" id="btn">ambil</button>
             </div>
 
-            <!-- Progress Section -->
             <div class="progress-section" id="progress-section">
                 <div class="progress-header">
                     <span class="progress-file" id="progress-file">video.mp4</span>
@@ -454,10 +432,8 @@
                 </div>
             </div>
 
-            <!-- Log Output -->
             <div class="log-output" id="log-output"></div>
 
-            <!-- Status -->
             <div id="status" class="status">
                 <span class="cursor-blink">█</span> <span id="status-text"></span>
             </div>
@@ -472,12 +448,13 @@
     </div>
 
     <div class="footer">
-        <span>u</span>video <span>//</span> <span>v</span>1.0
+        <em>u</em>video <em>//</em> <em>v</em>1.0
     </div>
 
     <script>
         const urlInput = document.getElementById('url');
         const btn = document.getElementById('btn');
+        const btnPaste = document.getElementById('btn-paste');
         const progressSection = document.getElementById('progress-section');
         const progressFile = document.getElementById('progress-file');
         const progressPercent = document.getElementById('progress-percent');
@@ -507,8 +484,6 @@
             logOutput.appendChild(line);
             logOutput.scrollTop = logOutput.scrollHeight;
             logLines.push(line);
-            
-            // Keep only last 50 lines
             if (logLines.length > 50) {
                 const old = logLines.shift();
                 old.remove();
@@ -545,7 +520,6 @@
             progressSection.classList.remove('show');
         }
 
-        // Simulate progress for streaming download
         function startFakeProgress(filename, totalSize) {
             let downloaded = 0;
             let speed = 0;
@@ -553,8 +527,6 @@
             
             const interval = setInterval(() => {
                 const elapsed = (Date.now() - startTime) / 1000;
-                
-                // Simulate decreasing speed over time
                 if (elapsed < 1) {
                     speed = totalSize * 0.3;
                 } else if (elapsed < 3) {
@@ -562,14 +534,11 @@
                 } else {
                     speed = totalSize * 0.02 + Math.random() * totalSize * 0.01;
                 }
-                
                 downloaded += speed * 0.5;
-                
                 if (totalSize) {
                     const percent = Math.min((downloaded / totalSize) * 100, 99);
                     updateProgress(percent, downloaded, totalSize, speed);
                 } else {
-                    // Unknown size - just show downloaded
                     updateProgress(Math.min(downloaded / (10 * 1024 * 1024) * 100, 99), downloaded, null, speed);
                 }
             }, 500);
@@ -584,6 +553,16 @@
 
         urlInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') btn.click();
+        });
+
+        btnPaste.addEventListener('click', async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                urlInput.value = text;
+                urlInput.focus();
+            } catch {
+                urlInput.focus();
+            }
         });
 
         btn.addEventListener('click', async () => {
@@ -607,7 +586,6 @@
             let fakeProgress = null;
 
             try {
-                // First try to get file info with HEAD request
                 addLog('mendapatkan info file...', 'info');
                 
                 const res = await fetch('/api/download?url=' + encodeURIComponent(url));
@@ -637,19 +615,15 @@
                 addLog('mulai download...', 'info');
                 showProgress(name);
 
-                // Start fake progress
                 fakeProgress = startFakeProgress(name, totalSize || 10 * 1024 * 1024);
 
-                // Download the actual file
                 const blob = await res.blob();
                 
-                // Stop fake progress
                 if (fakeProgress) fakeProgress.stop();
 
                 addLog('download selesai!', 'ok');
                 addLog('ukuran file: ' + formatBytes(blob.size), 'info');
 
-                // Start download
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = name;
