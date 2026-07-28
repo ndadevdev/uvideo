@@ -7,7 +7,7 @@
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <title>uVideo</title>
+    <title>uvideo | convert</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap');
 
@@ -330,6 +330,141 @@
             animation: blink 0.7s step-end infinite;
         }
 
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 480px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #999;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-preview {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .modal-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .modal-info {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .modal-info span {
+            color: #1a1a1a;
+            font-weight: 700;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-secondary {
+            flex: 1;
+            font-family: 'Space Mono', monospace;
+            padding: 12px;
+            background: #f0f0f0;
+            color: #555;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-primary {
+            flex: 1;
+            font-family: 'Space Mono', monospace;
+            padding: 12px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
         .stats {
             margin-top: 32px;
             font-family: 'Space Mono', monospace;
@@ -527,7 +662,7 @@
 
     <div class="container">
         <div class="header">
-            <div class="logo">u<em>Video</em></div>
+            <div class="logo"><em>U</em>V</div>
             <div class="tagline">video downloader</div>
         </div>
 
@@ -541,7 +676,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
                     paste
                 </button>
-                <button class="btn-dl" id="btn">download</button>
+                <button class="btn-dl" id="btn">convert</button>
             </div>
 
             <div class="progress-section" id="progress-section">
@@ -597,7 +732,30 @@
     </div>
 
     <div class="footer">
-        <em>u</em>video <em>//</em> <em>v</em>1.0 <em>//</em> copyright by <em>ndadev</em>
+        <em>U</em>V <em>//</em> <em>v</em>1.0 <em>//</em> copyright by <em>ndadev</em>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Preview</span>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-preview">
+                    <video id="modal-video" controls></video>
+                </div>
+                <div class="modal-info">
+                    File: <span id="modal-filename">video.mp4</span><br>
+                    Ukuran: <span id="modal-size">0 MB</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="modal-close-btn">Tutup</button>
+                <button class="btn-primary" id="modal-download">Download</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -614,8 +772,17 @@
         const status = document.getElementById('status');
         const statusText = document.getElementById('status-text');
         const countEl = document.getElementById('count');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalVideo = document.getElementById('modal-video');
+        const modalFilename = document.getElementById('modal-filename');
+        const modalSize = document.getElementById('modal-size');
+        const modalClose = document.getElementById('modal-close');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const modalDownload = document.getElementById('modal-download');
         let count = 0;
         let logLines = [];
+        let currentBlob = null;
+        let currentFilename = 'video.mp4';
 
         function formatBytes(bytes) {
             if (bytes === 0) return '0 B';
@@ -668,6 +835,38 @@
         function hideProgress() {
             progressSection.classList.remove('show');
         }
+
+        function showModal(blob, filename) {
+            currentBlob = blob;
+            currentFilename = filename;
+            const url = URL.createObjectURL(blob);
+            modalVideo.src = url;
+            modalFilename.textContent = filename;
+            modalSize.textContent = formatBytes(blob.size);
+            modalOverlay.classList.add('show');
+        }
+
+        function hideModal() {
+            modalOverlay.classList.remove('show');
+            modalVideo.pause();
+            modalVideo.src = '';
+        }
+
+        modalClose.addEventListener('click', hideModal);
+        modalCloseBtn.addEventListener('click', hideModal);
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) hideModal();
+        });
+
+        modalDownload.addEventListener('click', () => {
+            if (currentBlob) {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(currentBlob);
+                a.download = currentFilename;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }
+        });
 
         function startFakeProgress(filename, totalSize) {
             let downloaded = 0;
