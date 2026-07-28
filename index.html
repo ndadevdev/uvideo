@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>uVideo - Download Video</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            color: #fff;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .logo span {
+            color: #00ff88;
+        }
+
+        .tagline {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 40px;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 16px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #00ff88;
+        }
+
+        input[type="text"]::placeholder {
+            color: #555;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .btn {
+            padding: 14px 24px;
+            background: #00ff88;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #00cc6a;
+        }
+
+        .btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: wait;
+        }
+
+        .msg {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .msg.show {
+            display: block;
+        }
+
+        .msg.loading {
+            background: #1a1a2e;
+            color: #4fc3f7;
+            border: 1px solid #233;
+        }
+
+        .msg.ok {
+            background: #0a1f0a;
+            color: #00ff88;
+            border: 1px solid #1a3a1a;
+        }
+
+        .msg.err {
+            background: #1f0a0a;
+            color: #ff5555;
+            border: 1px solid #3a1a1a;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #234;
+            border-top-color: #4fc3f7;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .help {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #1a1a1a;
+        }
+
+        .help h3 {
+            font-size: 12px;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+
+        .help ul {
+            list-style: none;
+        }
+
+        .help li {
+            font-size: 13px;
+            color: #555;
+            padding: 6px 0;
+        }
+
+        .help li::before {
+            content: "→ ";
+            color: #333;
+        }
+
+        .footer {
+            margin-top: auto;
+            padding-top: 60px;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .footer a {
+            color: #444;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            color: #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">u<span>Video</span></div>
+    <p class="tagline">paste url, dapet video</p>
+
+    <div class="box">
+        <form id="form">
+            <div class="input-row">
+                <input type="text" id="url" placeholder="https://example.com/video.mp4" autocomplete="off" spellcheck="false">
+                <button type="submit" class="btn" id="btn">Download</button>
+            </div>
+        </form>
+        <div id="msg" class="msg"></div>
+
+        <div class="help">
+            <h3>Cara pakai</h3>
+            <ul>
+                <li>Copy URL video yang mau didownload</li>
+                <li>Paste di kolom atas, klik Download</li>
+                <li>File langsung tersimpan ke device lo</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        built with python + vercel
+    </div>
+
+    <script>
+        const form = document.getElementById('form');
+        const urlInput = document.getElementById('url');
+        const btn = document.getElementById('btn');
+        const msg = document.getElementById('msg');
+
+        function setMsg(type, text) {
+            msg.className = 'msg show ' + type;
+            msg.innerHTML = type === 'loading' 
+                ? '<span class="spinner"></span>' + text 
+                : text;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            try { new URL(url); } catch { 
+                setMsg('err', 'url ga valid');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '...';
+            setMsg('loading', 'lagi proses');
+
+            try {
+                const res = await fetch('/api/download?url=' + encodeURIComponent(url));
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: 'error' }));
+                    throw new Error(err.error || 'gagal download');
+                }
+
+                const disp = res.headers.get('Content-Disposition');
+                let name = 'video.mp4';
+                if (disp) {
+                    const m = disp.match(/filename="?([^"]+)"?/);
+                    if (m) name = m[1];
+                }
+
+                const blob = await res.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = name;
+                a.click();
+                URL.revokeObjectURL(a.href);
+
+                setMsg('ok', 'done — ' + name);
+                urlInput.value = '';
+
+            } catch (err) {
+                setMsg('err', err.message || 'ada error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Download';
+            }
+        });
+    </script>
+</body>
+</html>
