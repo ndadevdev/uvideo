@@ -61,3 +61,42 @@ vdy.to streams use HLS (.m3u8 + .ts segments). The proxy:
 - Progress bar with fake progress animation
 - Running text ticker showing supported platforms
 - Responsive (breakpoints: 768px, 480px, 360px)
+
+## Session History
+
+### Session 1 (July 28, 2026)
+- Built video downloader web tool from scratch
+- Implemented CLI (`download.py`) and web UI (`index.html` + `api/download.py`)
+- Deployed to Vercel (free tier)
+- Added security: rate limiting, URL validation, SSRF protection, security headers
+- Added responsive design, terminal-style UI, running text ticker
+
+### Session 2 (July 28, 2026)
+- Fixed TikTok download — yt-dlp fails with 403, switched to tikwm.com API
+- Added auto-platform detection (`detect_platform()`) for TikTok, YouTube, Instagram, Facebook, Twitter, vdy.to, direct URLs
+- Added auto-clear cache/blob after download (modal cleanup)
+- Fixed modal preview popup (was auto-downloading instead of showing preview)
+- Updated AGENTS.md with project facts
+
+### Session 3 (July 28, 2026)
+- Tested all platforms: YouTube ✓, TikTok ✓, vdy.to ✓, Instagram ✗ (needs login), Facebook ✗ (needs login), Twitter ✗ (needs login)
+- Added YouTube URL extraction via yt-dlp `-g` flag → proxy (faster than full download)
+- Added friendly error messages per platform for unsupported ones
+- Added HLS support for vdy.to: parse master.m3u8 → fetch segments → parallel download (10 workers, 3 retries)
+- Fixed vdy.to returning master.m3u8 instead of video — was not handling HLS streams
+- Added parallel segment download (71 segments in ~60s vs timeout before)
+- Added retry logic for HLS segment downloads
+
+### Session 4 (July 28, 2026)
+- Fixed video preview: added MIME type detection for blob creation (`.ts` → `video/mp2t`, `.mp4` → `video/mp4`)
+- Added clear button (×) on URL input field
+- Added modal preview fallback: shows "preview not available" message for unsupported formats (.ts MPEG-TS)
+- Added UV favicon to browser tab (inline SVG: dark bg, blue U, white V)
+- Added `modalNoPreview` element for unsupported format feedback
+
+## User Preferences
+- Language: Indonesian for UI text
+- Theme: light, terminal-style (`~$` prefix)
+- User GitHub: `git@github.com:ndadevdev/uvideo.git`
+- User prefers natural, unique UI (not AI-generated looking)
+- User communicates in Indonesian
