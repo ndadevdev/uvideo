@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Video Downloader - Download video dari URL
-Cara pakai: python download.py <URL> [nama_file]
-Support: direct URL + situs protected (vdy.to, dll)
+Video Downloader - Auto-detect platform & download
+Support: TikTok, YouTube, Facebook, Instagram, Twitter, Vimeo, Direct URL, vdy.to
 """
 
 import os
@@ -19,8 +18,10 @@ if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-PROTECTED_SITES = ['vdy.to', 'vidio.com', 'doodstream.com', 'streamtape.com']
+UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
 
+
+# ─── Utility ──────────────────────────────────────────────────────
 
 def sanitize_filename(name):
     name = re.sub(r'[<>:"/\\|?*]', '_', name)
@@ -45,27 +46,124 @@ def format_size(b):
     return f"{b:.1f} TB"
 
 
-def is_direct_url(url):
-    parsed = urlparse(url)
-    path = parsed.path.lower()
-    return any(path.endswith(ext) for ext in ['.mp4', '.webm', '.avi', '.mov', '.mkv', '.flv', '.m3u8', '.ts'])
+# ─── Platform Detection ──────────────────────────────────────────
+
+def detect_platform(url):
+    domain = urlparse(url).netloc.lower().replace('www.', '')
+    path = urlparse(url).path.lower()
+
+    if any(path.endswith(ext) for ext in ['.mp4', '.webm', '.avi', '.mov', '.mkv', '.flv', '.m3u8', '.ts']):
+        return 'direct'
+
+    if 'tiktok.com' in domain:
+        return 'tiktok'
+
+    if domain in ('youtube.com', 'youtu.be', 'm.youtube.com'):
+        return 'youtube'
+
+    if 'instagram.com' in domain:
+        return 'instagram'
+
+    if domain in ('facebook.com', 'fb.watch', 'm.facebook.com'):
+        return 'facebook'
+
+    if domain in ('twitter.com', 'x.com'):
+        return 'twitter'
+
+    if domain in ('vimeo.com',):
+        return 'vimeo'
+
+    if domain in ('dailymotion.com', 'dai.ly'):
+        return 'dailymotion'
+
+    if 'vdy.to' in domain or 'vidio.com' in domain:
+        return 'protected'
+
+    if 'doodstream.com' in domain or 'streamtape.com' in domain:
+        return 'protected'
+
+    return 'unknown'
 
 
-def is_protected_site(url):
-    domain = urlparse(url).netloc.lower()
-    return any(site in domain for site in PROTECTED_SITES)
+# ─── Platform Handlers ───────────────────────────────────────────
+
+def handle_tiktok(url, output=None):
+    """Download TikTok via tikwm.com API."""
+    try:
+        import requests
+    except ImportError:
+        subprocess.run([sys.executable, '-m', 'pip', 'install', 'requests'], check=True)
+        import requests
+
+    print("[tiktok] Mengambil info video...")
+    r = requests.post(
+        'https://www.tikwm.com/api/',
+        data={'url': url, 'count': 12, 'cursor': 0},
+        headers={'User-Agent': UA},
+        timeout=30,
+    )
+    if r.status_code != 200:
+        raise Exception(f"tikwm API error: HTTP {r.status_code}")
+
+    data = r.json()
+    if data.get('code') != 0:
+        raise Exception(f"tikwm error: {data.get('msg', 'unknown')}")
+
+    vd = data.get('data', {})
+    video_url = vd.get('play') or vd.get('wmplay')
+    title = vd.get('title', 'tiktok_video')
+
+    if not video_url:
+        raise Exception("Video URL tidak ditemukan")
+
+    filename = output or (sanitize_filename(title) + '.mp4')
+    print(f"[tiktok] Judul: {title}")
+    print(f"[tiktok] Download tanpa watermark...")
+
+    headers = {'User-Agent': UA, 'Referer': 'https://www.tiktok.com/'}
+    resp = requests.get(video_url, headers=headers, stream=True, timeout=60)
+    resp.raise_for_status()
+
+    total = int(resp.headers.get('Content-Length', 0)) or None
+    downloaded = 0
+
+    filepath = Path(filename)
+    counter = 1
+    stem = filepath.stem
+    suffix = filepath.suffix
+    while filepath.exists():
+        filepath = Path(f"{stem}_{counter}{suffix}")
+        counter += 1
+
+    with open(filepath, 'wb') as f:
+        for chunk in resp.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+                downloaded += len(chunk)
+                if total:
+                    pct = (downloaded / total) * 100
+                    filled = int(30 * downloaded / total)
+                    bar = '#' * filled + '-' * (30 - filled)
+                    print(f"\r  [{bar}] {pct:5.1f}% ({format_size(downloaded)}/{format_size(total)})", end='', flush=True)
+                else:
+                    print(f"\r  Diunduh: {format_size(downloaded)}", end='', flush=True)
+
+    print()
+    print(f"Selesai: {filepath} ({format_size(filepath.stat().st_size)})")
+    return filepath
 
 
-# ─── Extract video URL dari situs protected ───────────────────────
+def handle_protected(url, output=None):
+    """Download from vdy.to / vidio.com."""
+    try:
+        import requests
+    except ImportError:
+        subprocess.run([sys.executable, '-m', 'pip', 'install', 'requests'], check=True)
+        import requests
 
-def extract_vdy_url(url):
-    """Extract direct video URL dari vdy.to (3 step)"""
-    import requests
+    headers = {'User-Agent': UA}
 
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-
-    # Step 1: Fetch halaman utama → ambil iframeId & embedToken
-    print("  [1/3] Fetch halaman utama...")
+    print("[protected] Fetch halaman utama...")
     r = requests.get(url, headers=headers, timeout=15)
     if r.status_code != 200:
         raise Exception(f"Gagal fetch: HTTP {r.status_code}")
@@ -75,56 +173,74 @@ def extract_vdy_url(url):
     if not id_match or not token_match:
         raise Exception("iframeId/embedToken tidak ditemukan")
 
-    iframe_id = id_match.group(1)
-    token = token_match.group(1)
-
-    # Step 2: Fetch halaman player (iframe)
     domain = urlparse(url).netloc
-    iframe_url = f"https://{domain}/ip129jk?id={iframe_id}&t={token}"
-    print(f"  [2/3] Fetch player page...")
+    iframe_url = f"https://{domain}/ip129jk?id={id_match.group(1)}&t={token_match.group(1)}"
+    print("[protected] Fetch player page...")
     r2 = requests.get(iframe_url, headers={**headers, 'Referer': url}, timeout=15)
 
-    # Step 3: Cari stream.php URL → fetch → extract video URL
     prefetch = re.search(r'prefetch.*?href=["\']([^"\']+)["\']', r2.text)
     if not prefetch:
         raise Exception("Stream URL tidak ditemukan")
 
     stream_url = prefetch.group(1).replace('&amp;', '&')
-    print(f"  [3/3] Fetch stream page...")
+    print("[protected] Fetch stream page...")
     r3 = requests.get(stream_url, headers={**headers, 'Referer': iframe_url}, timeout=15)
 
-    # Cari URL video di halaman stream
     all_urls = re.findall(r'https?://[^\s"\'<>]+', r3.text)
+    video_url = None
     for u in all_urls:
         if any(x in u for x in ['mp4', 'overfetch', 'cdn']):
             if 'google' not in u and 'jquery' not in u and 'stream.php' not in u:
-                return u, stream_url
+                video_url = u
+                break
 
-    raise Exception("URL video tidak ditemukan")
+    if not video_url:
+        raise Exception("URL video tidak ditemukan")
 
-
-def extract_generic_url(url):
-    """Generic extraction: fetch page → cari video URL"""
-    import requests
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    r = requests.get(url, headers=headers, timeout=15)
-    vid_match = re.search(r'(https?://[^"\'<>\s]+\.(mp4|m3u8|webm)[^"\'<>\s]*)', r.text)
-    if vid_match:
-        return vid_match.group(1), headers['User-Agent']
-    raise Exception("URL video tidak ditemukan")
+    filename = output or get_filename_from_url(video_url)
+    print(f"[protected] Downloading...")
+    return download_direct(video_url, filename, referer=stream_url)
 
 
-def extract_video_url(url):
-    domain = urlparse(url).netloc.lower()
-    if 'vdy.to' in domain:
-        return extract_vdy_url(url)
-    return extract_generic_url(url)
+def handle_youtube(url, output=None):
+    """Extract direct URL from YouTube, then download."""
+    import subprocess
+
+    print("[youtube] Extracting video URL...")
+    cmd = ['python', '-m', 'yt_dlp', '--no-check-certificates', '-g', '-f', 'best[ext=mp4]/best[height<=720]/best', url]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+    if result.returncode != 0 or not result.stdout.strip():
+        err = result.stderr.strip().split('\n')[-1] if result.stderr else 'yt-dlp gagal'
+        raise Exception(err)
+
+    video_url = result.stdout.strip().split('\n')[0]
+    filename = output or 'youtube_video.mp4'
+    print(f"[youtube] URL ditemukan, mengunduh...")
+    return download_direct(video_url, filename, referer=url)
 
 
-# ─── Download functions ───────────────────────────────────────────
+def handle_ytdlp(url, output=None):
+    """Fallback: download via yt-dlp full download."""
+    import subprocess
+
+    outtmpl = output or '%(title)s.%(ext)s'
+    print(f"[yt-dlp] Download: {url}")
+
+    cmd = ['python', '-m', 'yt_dlp', '--no-check-certificates', '--progress', '--newline', '-o', outtmpl, url]
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"yt-dlp gagal (exit code {e.returncode})")
+
 
 def download_direct(url, output=None, referer=None, chunk_size=8192):
-    import requests as req_lib
+    """Download direct URL with progress bar."""
+    try:
+        import requests as req_lib
+    except ImportError:
+        subprocess.run([sys.executable, '-m', 'pip', 'install', 'requests'], check=True)
+        import requests as req_lib
 
     filename = output or get_filename_from_url(url)
     filepath = Path(filename)
@@ -139,103 +255,84 @@ def download_direct(url, output=None, referer=None, chunk_size=8192):
     print(f"Download: {url[:100]}...")
     print(f"Menyimpan ke: {filepath}")
 
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    headers = {'User-Agent': UA}
     if referer:
         headers['Referer'] = referer
         parsed_referer = urlparse(referer)
         headers['Origin'] = f"{parsed_referer.scheme}://{parsed_referer.netloc}"
 
-    try:
-        r = req_lib.get(url, headers=headers, stream=True, timeout=60)
-        r.raise_for_status()
+    r = req_lib.get(url, headers=headers, stream=True, timeout=60)
+    r.raise_for_status()
 
-        total = int(r.headers.get('Content-Length', 0)) or None
-        downloaded = 0
+    total = int(r.headers.get('Content-Length', 0)) or None
+    downloaded = 0
 
-        with open(filepath, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if total:
-                        pct = (downloaded / total) * 100
-                        filled = int(30 * downloaded / total)
-                        bar = '#' * filled + '-' * (30 - filled)
-                        print(f"\r  [{bar}] {pct:5.1f}% ({format_size(downloaded)}/{format_size(total)})", end='', flush=True)
-                    else:
-                        print(f"\r  Diunduh: {format_size(downloaded)}", end='', flush=True)
+    with open(filepath, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=chunk_size):
+            if chunk:
+                f.write(chunk)
+                downloaded += len(chunk)
+                if total:
+                    pct = (downloaded / total) * 100
+                    filled = int(30 * downloaded / total)
+                    bar = '#' * filled + '-' * (30 - filled)
+                    print(f"\r  [{bar}] {pct:5.1f}% ({format_size(downloaded)}/{format_size(total)})", end='', flush=True)
+                else:
+                    print(f"\r  Diunduh: {format_size(downloaded)}", end='', flush=True)
 
-        print()
-        print(f"Selesai: {filepath} ({format_size(filepath.stat().st_size)})")
-        return filepath
-
-    except req_lib.exceptions.HTTPError as e:
-        print(f"\nError HTTP {e.response.status_code}: {e}")
-        sys.exit(1)
-    except req_lib.exceptions.ConnectionError as e:
-        print(f"\nError Koneksi: {e}")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        if filepath.exists():
-            filepath.unlink()
-        print("\nDownload dibatalkan.")
-        sys.exit(130)
-
-
-def download_ytdlp(url, output=None):
-    try:
-        subprocess.run(['python', '-m', 'yt_dlp', '--version'], capture_output=True, timeout=5)
-    except:
-        print("Installing yt-dlp...")
-        subprocess.run([sys.executable, '-m', 'pip', 'install', 'yt-dlp'], check=True)
-
-    outtmpl = output or '%(title)s.%(ext)s'
-    print(f"Download (via yt-dlp): {url}")
-
-    cmd = ['python', '-m', 'yt_dlp', '--no-check-certificates', '--progress', '--newline', '-o', outtmpl, url]
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"\nError: yt-dlp gagal (exit code {e.returncode})")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        print("\nDownload dibatalkan.")
-        sys.exit(130)
+    print()
+    print(f"Selesai: {filepath} ({format_size(filepath.stat().st_size)})")
+    return filepath
 
 
 # ─── Main ─────────────────────────────────────────────────────────
 
-def download(url, output=None, force_ytdlp=False):
-    if is_direct_url(url) and not force_ytdlp:
-        return download_direct(url, output)
-
-    if is_protected_site(url) or force_ytdlp:
-        try:
-            print(f"Mengekstrak video URL dari situs protected...")
-            video_url, referer = extract_video_url(url)
-            print(f"URL video: {video_url[:80]}...")
-            return download_direct(video_url, output, referer=referer)
-        except Exception as e:
-            print(f"Gagal extract: {e}")
-            print("Fallback ke yt-dlp...")
-            return download_ytdlp(url, output)
+def download(url, output=None):
+    platform = detect_platform(url)
+    print(f"Platform terdeteksi: {platform}")
 
     try:
-        print(f"Mencoba extract video URL...")
-        video_url, referer = extract_video_url(url)
-        print(f"URL video: {video_url[:80]}...")
-        return download_direct(video_url, output, referer=referer)
-    except:
-        return download_ytdlp(url, output)
+        if platform == 'direct':
+            return download_direct(url, output)
+
+        elif platform == 'tiktok':
+            return handle_tiktok(url, output)
+
+        elif platform == 'youtube':
+            return handle_youtube(url, output)
+
+        elif platform == 'protected':
+            return handle_protected(url, output)
+
+        elif platform in ('instagram', 'facebook', 'twitter', 'vimeo', 'dailymotion'):
+            try:
+                return handle_youtube(url, output)
+            except:
+                print(f"[{platform}] yt-dlp extract gagal, coba full download...")
+                return handle_ytdlp(url, output)
+
+        else:
+            print("[unknown] Mencoba extract...")
+            try:
+                return handle_protected(url, output)
+            except:
+                try:
+                    return handle_youtube(url, output)
+                except:
+                    print("[unknown] Fallback ke yt-dlp...")
+                    return handle_ytdlp(url, output)
+
+    except Exception as e:
+        print(f"\nError: {e}")
+        sys.exit(1)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Download video dari URL')
+    parser = argparse.ArgumentParser(description='Video Downloader - Auto-detect platform')
     parser.add_argument('url', help='URL video')
     parser.add_argument('-o', '--output', help='Nama file output')
-    parser.add_argument('--ytdlp', action='store_true', help='Paksa pake yt-dlp')
     args = parser.parse_args()
-    download(args.url, args.output, args.ytdlp)
+    download(args.url, args.output)
 
 
 if __name__ == '__main__':

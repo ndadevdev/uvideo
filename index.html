@@ -846,10 +846,27 @@
             modalOverlay.classList.add('show');
         }
 
+        function cleanupBlob() {
+            if (modalVideo.src && modalVideo.src.startsWith('blob:')) {
+                URL.revokeObjectURL(modalVideo.src);
+            }
+            currentBlob = null;
+            currentFilename = 'video.mp4';
+        }
+
         function hideModal() {
             modalOverlay.classList.remove('show');
             modalVideo.pause();
-            modalVideo.src = '';
+            cleanupBlob();
+        }
+
+        function clearAll() {
+            clearLog();
+            hideProgress();
+            hideModal();
+            status.className = 'status';
+            statusText.textContent = '';
+            urlInput.value = '';
         }
 
         modalClose.addEventListener('click', hideModal);
@@ -860,11 +877,17 @@
 
         modalDownload.addEventListener('click', () => {
             if (currentBlob) {
+                const blobUrl = URL.createObjectURL(currentBlob);
                 const a = document.createElement('a');
-                a.href = URL.createObjectURL(currentBlob);
+                a.href = blobUrl;
                 a.download = currentFilename;
                 a.click();
-                URL.revokeObjectURL(a.href);
+
+                setTimeout(() => {
+                    URL.revokeObjectURL(blobUrl);
+                    hideModal();
+                    addLog('file tersimpan ke device', 'ok');
+                }, 1000);
             }
         });
 
@@ -972,16 +995,13 @@
                 addLog('download selesai!', 'ok');
                 addLog('ukuran file: ' + formatBytes(blob.size), 'info');
 
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = name;
-                a.click();
-                URL.revokeObjectURL(a.href);
+                hideProgress();
 
                 count++;
                 countEl.textContent = count;
-                setStatus('ok', 'done — ' + name);
-                urlInput.value = '';
+                setStatus('ok', 'preview — ' + name);
+
+                showModal(blob, name);
 
             } catch (err) {
                 if (fakeProgress) fakeProgress.stop();
@@ -989,7 +1009,7 @@
                 setStatus('err', err.message || 'error');
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'download';
+                btn.textContent = 'convert';
             }
         });
     </script>

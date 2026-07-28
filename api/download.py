@@ -1,6 +1,6 @@
 """
 Vercel Serverless Function - Video Downloader
-Security: rate limiting, input validation, URL filtering
+Platform detection: auto-detect TikTok, YouTube, Instagram, Facebook, etc.
 """
 from http.server import BaseHTTPRequestHandler
 import urllib.request
@@ -9,14 +9,13 @@ import json
 import re
 import os
 import time
-import hashlib
 from urllib.parse import urlparse, unquote
 from collections import defaultdict
 
 # ─── Security Config ──────────────────────────────────────────────
 
-RATE_LIMIT_WINDOW = 60  # detik
-RATE_LIMIT_MAX = 10     # max request per window
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX = 10
 rate_limit_store = defaultdict(list)
 
 BLOCKED_DOMAINS = [
@@ -26,14 +25,14 @@ BLOCKED_DOMAINS = [
 ]
 
 ALLOWED_SCHEMES = ['http', 'https']
-
 MAX_URL_LENGTH = 2048
+
+UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
 
 
 # ─── Security Functions ──────────────────────────────────────────
 
 def get_client_ip(headers):
-    """Get real client IP from headers."""
     forwarded = headers.get('X-Forwarded-For')
     if forwarded:
         return forwarded.split(',')[0].strip()
@@ -44,78 +43,86 @@ def get_client_ip(headers):
 
 
 def check_rate_limit(client_ip):
-    """Check if client exceeded rate limit."""
     now = time.time()
     window_start = now - RATE_LIMIT_WINDOW
-    
-    # Clean old entries
     rate_limit_store[client_ip] = [
         t for t in rate_limit_store[client_ip] if t > window_start
     ]
-    
     if len(rate_limit_store[client_ip]) >= RATE_LIMIT_MAX:
         return False
-    
     rate_limit_store[client_ip].append(now)
     return True
 
 
 def sanitize_url(url):
-    """Validate and sanitize URL."""
     if not url or not isinstance(url, str):
         return None, "URL kosong"
-    
     url = url.strip()
-    
     if len(url) > MAX_URL_LENGTH:
         return None, "URL terlalu panjang"
-    
     try:
         parsed = urlparse(url)
     except Exception:
         return None, "URL tidak valid"
-    
     if parsed.scheme not in ALLOWED_SCHEMES:
         return None, "URL harus http atau https"
-    
     if not parsed.netloc:
         return None, "URL tidak valid"
-    
-    # Block internal/private IPs
     domain = parsed.netloc.lower()
     for blocked in BLOCKED_DOMAINS:
         if blocked in domain:
             return None, "URL tidak diizinkan"
-    
-    # Block IP addresses (prevent SSRF)
     ip_match = re.match(r'^(\d{1,3}\.){3}\d{1,3}$', parsed.netloc.split(':')[0])
     if ip_match:
         return None, "IP address tidak diizinkan"
-    
     return url, None
 
 
 def log_request(client_ip, url, status, error=None):
-    """Simple request logging."""
     timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-    msg = f"[{timestamp}] {client_ip} | {url[:50]} | {status}"
+    msg = f"[{timestamp}] {client_ip} | {url[:60]} | {status}"
     if error:
         msg += f" | {error}"
     print(msg)
 
 
-# ─── Video Extract Functions ──────────────────────────────────────
+# ─── Platform Detection ──────────────────────────────────────────
 
-PROTECTED_SITES = ['vdy.to', 'vidio.com', 'doodstream.com', 'streamtape.com']
+def detect_platform(url):
+    domain = urlparse(url).netloc.lower().replace('www.', '')
+    path = urlparse(url).path.lower()
 
-YTDLP_SITES = [
-    'youtube.com', 'youtu.be', 'www.youtube.com', 'm.youtube.com',
-    'facebook.com', 'fb.watch', 'www.facebook.com', 'm.facebook.com',
-    'instagram.com', 'www.instagram.com',
-    'tiktok.com', 'www.tiktok.com', 'vm.tiktok.com',
-    'twitter.com', 'x.com', 'www.twitter.com', 'www.x.com',
-    'vimeo.com', 'dailymotion.com',
-]
+    if any(path.endswith(ext) for ext in ['.mp4', '.webm', '.avi', '.mov', '.mkv', '.flv', '.m3u8', '.ts']):
+        return 'direct'
+
+    if 'tiktok.com' in domain:
+        return 'tiktok'
+
+    if domain in ('youtube.com', 'youtu.be', 'm.youtube.com'):
+        return 'youtube'
+
+    if 'instagram.com' in domain:
+        return 'instagram'
+
+    if domain in ('facebook.com', 'fb.watch', 'm.facebook.com'):
+        return 'facebook'
+
+    if domain in ('twitter.com', 'x.com'):
+        return 'twitter'
+
+    if domain in ('vimeo.com',):
+        return 'vimeo'
+
+    if domain in ('dailymotion.com', 'dai.ly'):
+        return 'dailymotion'
+
+    if 'vdy.to' in domain or 'vidio.com' in domain:
+        return 'protected'
+
+    if 'doodstream.com' in domain or 'streamtape.com' in domain:
+        return 'protected'
+
+    return 'unknown'
 
 
 def sanitize_filename(name):
@@ -133,25 +140,65 @@ def get_filename_from_url(url):
     return sanitize_filename(name)
 
 
-def is_direct_url(url):
-    parsed = urlparse(url)
-    path = parsed.path.lower()
-    return any(path.endswith(ext) for ext in ['.mp4', '.webm', '.avi', '.mov', '.mkv', '.flv', '.m3u8', '.ts'])
+# ─── Platform Handlers ───────────────────────────────────────────
+
+def handle_youtube(url):
+    """Extract direct video URL from YouTube via yt-dlp -g flag."""
+    import subprocess
+
+    cmd = [
+        'python', '-m', 'yt_dlp',
+        '--no-check-certificates',
+        '-g', '-f', 'best[ext=mp4]/best[height<=720]/best',
+        url,
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+    if result.returncode != 0 or not result.stdout.strip():
+        err = result.stderr.strip().split('\n')[-1] if result.stderr else 'yt-dlp gagal'
+        raise Exception(f"YouTube: {err}")
+
+    video_url = result.stdout.strip().split('\n')[0]
+    parsed = urlparse(video_url)
+    filename = 'youtube_video.mp4'
+
+    return video_url, filename, url
 
 
-def is_ytdlp_site(url):
-    domain = urlparse(url).netloc.lower()
-    return any(site in domain for site in YTDLP_SITES)
-
-
-def is_protected_site(url):
-    domain = urlparse(url).netloc.lower()
-    return any(site in domain for site in PROTECTED_SITES)
-
-
-def extract_vdy_url(url):
+def handle_tiktok(url):
+    """Download TikTok via tikwm.com API."""
     import requests as req_lib
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+
+    r = req_lib.post(
+        'https://www.tikwm.com/api/',
+        data={'url': url, 'count': 12, 'cursor': 0},
+        headers={'User-Agent': UA},
+        timeout=30,
+    )
+    if r.status_code != 200:
+        raise Exception(f"tikwm API error: HTTP {r.status_code}")
+
+    data = r.json()
+    if data.get('code') != 0:
+        raise Exception(f"tikwm error: {data.get('msg', 'unknown')}")
+
+    video_data = data.get('data', {})
+    video_url = video_data.get('play') or video_data.get('wmplay')
+    title = video_data.get('title', 'tiktok_video')
+
+    if not video_url:
+        raise Exception("Video URL tidak ditemukan dari tikwm")
+
+    filename = sanitize_filename(title) + '.mp4'
+    return video_url, filename, 'https://www.tiktok.com/'
+
+
+def handle_protected(url):
+    """Download from vdy.to / vidio.com."""
+    import requests as req_lib
+
+    headers = {'User-Agent': UA}
 
     r = req_lib.get(url, headers=headers, timeout=15)
     if r.status_code != 200:
@@ -177,16 +224,9 @@ def extract_vdy_url(url):
     for u in all_urls:
         if any(x in u for x in ['mp4', 'overfetch', 'cdn']):
             if 'google' not in u and 'jquery' not in u and 'stream.php' not in u:
-                return u, stream_url
+                return u, get_filename_from_url(u), stream_url
 
     raise Exception("URL video tidak ditemukan")
-
-
-def extract_video_url(url):
-    domain = urlparse(url).netloc.lower()
-    if 'vdy.to' in domain:
-        return extract_vdy_url(url)
-    raise Exception(f"Tidak bisa extract dari {domain}")
 
 
 # ─── Vercel Handler ──────────────────────────────────────────────
@@ -214,13 +254,11 @@ class handler(BaseHTTPRequestHandler):
     def handle_download(self):
         client_ip = get_client_ip(self.headers)
 
-        # Rate limiting
         if not check_rate_limit(client_ip):
             log_request(client_ip, '', 429, 'rate limit exceeded')
             self.send_json(429, {'error': 'Terlalu banyak request. Coba lagi nanti.'})
             return
 
-        # Extract URL
         url = None
         if '?' in self.path:
             query = self.path.split('?', 1)[1]
@@ -241,43 +279,58 @@ class handler(BaseHTTPRequestHandler):
             except:
                 pass
 
-        # Validate URL
         url, error = sanitize_url(url)
         if error:
             log_request(client_ip, url or '', 400, error)
             self.send_json(400, {'error': error})
             return
 
-        filename = get_filename_from_url(url)
-        referer = None
+        platform = detect_platform(url)
+        log_request(client_ip, url, 200, platform)
 
         try:
-            # Direct URL
-            if is_direct_url(url):
-                video_url = url
-                referer = url
-            # Social media / big sites → yt-dlp
-            elif is_ytdlp_site(url):
-                log_request(client_ip, url, 200, 'yt-dlp')
-                self.download_ytdlp(url, filename)
-                return
-            # Protected sites
-            elif is_protected_site(url):
-                video_url, referer = extract_video_url(url)
-                filename = get_filename_from_url(video_url)
-            else:
-                # Try extract, fallback yt-dlp
-                try:
-                    video_url, referer = extract_video_url(url)
-                    filename = get_filename_from_url(video_url)
-                except:
-                    log_request(client_ip, url, 200, 'yt-dlp fallback')
-                    self.download_ytdlp(url, filename)
-                    return
+            if platform == 'direct':
+                self.proxy_download(url, get_filename_from_url(url), url)
 
-            # Download via proxy
-            log_request(client_ip, url, 200, 'direct proxy')
-            self.proxy_download(video_url, filename, referer)
+            elif platform == 'tiktok':
+                video_url, filename, referer = handle_tiktok(url)
+                self.proxy_download(video_url, filename, referer)
+
+            elif platform == 'youtube':
+                video_url, filename, referer = handle_youtube(url)
+                self.proxy_download(video_url, filename, referer)
+
+            elif platform == 'protected':
+                video_url, filename, referer = handle_protected(url)
+                self.proxy_download(video_url, filename, referer)
+
+            elif platform in ('instagram', 'facebook', 'twitter', 'vimeo', 'dailymotion'):
+                try:
+                    video_url, filename, referer = handle_youtube(url)
+                    self.proxy_download(video_url, filename, referer)
+                except:
+                    try:
+                        self.download_ytdlp(url, get_filename_from_url(url))
+                    except:
+                        hint = {
+                            'instagram': 'Instagram butuh login. Coba paste direct URL video (bukan link postingan).',
+                            'facebook': 'Facebook butuh login. Coba pakai link watch/v/ langsung.',
+                            'twitter': 'Twitter/X butuh login untuk download video.',
+                            'vimeo': 'Gagal extract dari Vimeo.',
+                            'dailymotion': 'Gagal extract dari DailyMotion.',
+                        }.get(platform, f'Gagal download dari {platform}')
+                        raise Exception(hint)
+
+            else:
+                try:
+                    video_url, filename, referer = handle_protected(url)
+                    self.proxy_download(video_url, filename, referer)
+                except:
+                    try:
+                        video_url, filename, referer = handle_youtube(url)
+                        self.proxy_download(video_url, filename, referer)
+                    except:
+                        self.download_ytdlp(url, get_filename_from_url(url))
 
         except Exception as e:
             log_request(client_ip, url, 500, str(e))
@@ -286,9 +339,7 @@ class handler(BaseHTTPRequestHandler):
     def proxy_download(self, video_url, filename, referer):
         import requests as req_lib
 
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
+        headers = {'User-Agent': UA}
         if referer:
             headers['Referer'] = referer
             parsed_ref = urlparse(referer)
@@ -314,7 +365,6 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
 
     def download_ytdlp(self, url, filename):
-        """yt-dlp download - streams progress as JSON lines."""
         import subprocess
         import tempfile
 
@@ -357,7 +407,6 @@ class handler(BaseHTTPRequestHandler):
                 send_line({'error': f'yt-dlp gagal (exit code {proc.returncode})'})
                 return
 
-            # Find downloaded file
             for f in os.listdir(outdir):
                 filepath = os.path.join(outdir, f)
                 send_line({'file': f, 'size': os.path.getsize(filepath)})
