@@ -440,6 +440,20 @@
             object-fit: contain;
         }
 
+        .modal-no-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #111;
+            color: #888;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            text-align: center;
+            padding: 20px;
+        }
+
         .modal-info {
             font-family: 'Space Mono', monospace;
             font-size: 12px;
@@ -776,7 +790,10 @@
             </div>
             <div class="modal-body">
                 <div class="modal-preview">
-                    <video id="modal-video" controls></video>
+                    <video id="modal-video" controls preload="auto"></video>
+                    <div class="modal-no-preview" id="modal-no-preview" style="display:none;">
+                        Preview tidak tersedia untuk format ini. Silakan download langsung.
+                    </div>
                 </div>
                 <div class="modal-info">
                     File: <span id="modal-filename">video.mp4</span><br>
@@ -812,6 +829,7 @@
         const modalClose = document.getElementById('modal-close');
         const modalCloseBtn = document.getElementById('modal-close-btn');
         const modalDownload = document.getElementById('modal-download');
+        const modalNoPreview = document.getElementById('modal-no-preview');
         let count = 0;
         let logLines = [];
         let currentBlob = null;
@@ -890,11 +908,19 @@
             const mime = getMimeType(filename);
             const typedBlob = new Blob([await blob.arrayBuffer()], { type: mime });
             const url = URL.createObjectURL(typedBlob);
+
             modalVideo.src = url;
-            modalVideo.load();
             modalFilename.textContent = filename;
             modalSize.textContent = formatBytes(blob.size);
+            modalNoPreview.style.display = 'none';
+            modalVideo.style.display = 'block';
             modalOverlay.classList.add('show');
+            modalVideo.load();
+
+            modalVideo.onerror = () => {
+                modalVideo.style.display = 'none';
+                modalNoPreview.style.display = 'flex';
+            };
         }
 
         function cleanupBlob() {
@@ -908,6 +934,8 @@
         function hideModal() {
             modalOverlay.classList.remove('show');
             modalVideo.pause();
+            modalVideo.style.display = 'block';
+            modalNoPreview.style.display = 'none';
             cleanupBlob();
         }
 
