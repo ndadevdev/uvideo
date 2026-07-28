@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Crect width='200' height='80' rx='12' fill='%231a1a1a'/%3E%3Ctext x='22' y='58' font-family='monospace,sans-serif' font-size='44' font-weight='900' fill='%232563eb'%3EU%3C/text%3E%3Ctext x='72' y='58' font-family='monospace,sans-serif' font-size='44' font-weight='900' fill='%23fff'%3EV%3C/text%3E%3Ctext x='118' y='58' font-family='monospace,sans-serif' font-size='14' fill='%23666'%3Evideo%3C/text%3E%3C/svg%3E" alt="uvideo" width="280">
-</p>
-
-<h3 align="center">Video Downloader</h3>
+<h1 align="center">uvideo</h1>
 
 <p align="center">
   Download video dari YouTube, TikTok, Facebook, Instagram, dan situs lainnya.<br>
@@ -13,6 +9,14 @@
   <a href="https://uvideo.ndadev.my.id/">Live Demo</a> · 
   <a href="https://github.com/ndadevdev/uvideo/issues">Report Bug</a> · 
   <a href="https://github.com/ndadevdev/uvideo/issues">Request Feature</a>
+</p>
+
+<p align="center">
+  <img src="uvideodekstop.png" alt="uvideo desktop" width="100%">
+</p>
+
+<p align="center">
+  <img src="uvideomobile.png" alt="uvideo mobile" width="350">
 </p>
 
 ### Fitur
