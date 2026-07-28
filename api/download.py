@@ -195,7 +195,7 @@ def handle_tiktok(url):
 
 
 def handle_protected(url):
-    """Download from vdy.to / vidio.com."""
+    """Download from vdy.to / vidio.com. Returns (video_url, filename, referer, is_hls)."""
     import requests as req_lib
 
     headers = {'User-Agent': UA}
@@ -221,10 +221,22 @@ def handle_protected(url):
     r3 = req_lib.get(stream_url, headers={**headers, 'Referer': iframe_url}, timeout=15)
 
     all_urls = re.findall(r'https?://[^\s"\'<>]+', r3.text)
+
+    for u in all_urls:
+        lower = u.lower()
+        if 'm3u8' in lower:
+            title_match = re.search(r'<title>([^<]+)</title>', r3.text)
+            title = title_match.group(1).strip() if title_match else 'video'
+            filename = sanitize_filename(title) + '.mp4'
+            return u, filename, stream_url, True
+
     for u in all_urls:
         if any(x in u for x in ['mp4', 'overfetch', 'cdn']):
             if 'google' not in u and 'jquery' not in u and 'stream.php' not in u:
-                return u, get_filename_from_url(u), stream_url
+                title_match = re.search(r'<title>([^<]+)</title>', r3.text)
+                title = title_match.group(1).strip() if title_match else 'video'
+                filename = sanitize_filename(title) + '.mp4'
+                return u, filename, stream_url, False
 
     raise Exception("URL video tidak ditemukan")
 
@@ -301,8 +313,11 @@ class handler(BaseHTTPRequestHandler):
                 self.proxy_download(video_url, filename, referer)
 
             elif platform == 'protected':
-                video_url, filename, referer = handle_protected(url)
-                self.proxy_download(video_url, filename, referer)
+                video_url, filename, referer, is_hls = handle_protected(url)
+                if is_hls:
+                    self.proxy_hls(video_url, filename, referer)
+                else:
+                    self.proxy_download(video_url, filename, referer)
 
             elif platform in ('instagram', 'facebook', 'twitter', 'vimeo', 'dailymotion'):
                 try:
@@ -323,8 +338,11 @@ class handler(BaseHTTPRequestHandler):
 
             else:
                 try:
-                    video_url, filename, referer = handle_protected(url)
-                    self.proxy_download(video_url, filename, referer)
+                    video_url, filename, referer, is_hls = handle_protected(url)
+                    if is_hls:
+                        self.proxy_hls(video_url, filename, referer)
+                    else:
+                        self.proxy_download(video_url, filename, referer)
                 except:
                     try:
                         video_url, filename, referer = handle_youtube(url)
@@ -363,6 +381,84 @@ class handler(BaseHTTPRequestHandler):
             if chunk:
                 self.wfile.write(chunk)
                 self.wfile.flush()
+
+    def proxy_hls(self, master_url, filename, referer):
+        """Download HLS: parse m3u8, download segments in parallel, stream."""
+        import requests as req_lib
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        headers = {'User-Agent': UA}
+        if referer:
+            headers['Referer'] = referer
+
+        # Fetch master m3u8
+        r = req_lib.get(master_url, headers=headers, timeout=15)
+        r.raise_for_status()
+        base_url = master_url.rsplit('/', 1)[0] + '/'
+
+        # Find best resolution
+        lines = r.text.strip().split('\n')
+        best_sub = None
+        best_height = 0
+        for i, line in enumerate(lines):
+            m = re.search(r'RESOLUTION=\d+x(\d+)', line)
+            if m:
+                height = int(m.group(1))
+                if i + 1 < len(lines) and not lines[i + 1].startswith('#'):
+                    if height > best_height:
+                        best_height = height
+                        best_sub = lines[i + 1].strip()
+
+        if not best_sub:
+            for line in reversed(lines):
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    best_sub = line
+                    break
+
+        # Fetch sub m3u8
+        sub_url = base_url + best_sub if not best_sub.startswith('http') else best_sub
+        r2 = req_lib.get(sub_url, headers=headers, timeout=15)
+        r2.raise_for_status()
+
+        segments = [l.strip() for l in r2.text.strip().split('\n') if l.strip() and not l.startswith('#')]
+        if not segments:
+            raise Exception("Tidak ada segment video ditemukan")
+
+        seg_base = sub_url.rsplit('/', 1)[0] + '/'
+
+        # Download all segments in parallel
+        def download_seg(idx_name):
+            idx, seg = idx_name
+            seg_url = seg if seg.startswith('http') else seg_base + seg
+            for attempt in range(3):
+                try:
+                    sr = req_lib.get(seg_url, headers=headers, timeout=30)
+                    sr.raise_for_status()
+                    return idx, sr.content
+                except:
+                    if attempt == 2:
+                        raise
+                    import time
+                    time.sleep(1)
+
+        results = {}
+        with ThreadPoolExecutor(max_workers=10) as pool:
+            futures = {pool.submit(download_seg, (i, s)): i for i, s in enumerate(segments)}
+            for future in as_completed(futures):
+                idx, data = future.result()
+                results[idx] = data
+
+        # Stream in order
+        self.send_response(200)
+        self.send_header('Content-Type', 'video/mp2t')
+        self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+
+        for i in range(len(segments)):
+            self.wfile.write(results[i])
+        self.wfile.flush()
 
     def download_ytdlp(self, url, filename):
         import subprocess

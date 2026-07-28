@@ -21,6 +21,7 @@ Video downloader web tool with multi-platform auto-detection. Deployed on Vercel
 | YouTube | `handle_youtube()` | yt-dlp `-g` extract URL → proxy |
 | Instagram/FB/Twitter | `handle_youtube()` | yt-dlp extract → fallback `download_ytdlp()` |
 | vdy.to / vidio.com | `handle_protected()` | Custom 3-step extraction → proxy |
+| vdy.to (HLS) | `handle_protected()` + `proxy_hls()` | Parse m3u8 → parallel segment download → stream |
 | Direct URL (.mp4 etc) | `proxy_download()` | Direct proxy |
 
 ### Files
@@ -36,6 +37,13 @@ Video downloader web tool with multi-platform auto-detection. Deployed on Vercel
 - **yt-dlp** — Social media extraction (`-g` flag for URL-only mode)
 - YouTube extracts fastest with `-g -f best[ext=mp4]`
 
+### HLS Handling
+vdy.to streams use HLS (.m3u8 + .ts segments). The proxy:
+1. Fetches master m3u8, picks best resolution (720p)
+2. Fetches sub-m3u8 for segment list
+3. Downloads ALL segments in parallel (10 workers, 3 retries each)
+4. Streams concatenated .ts data to client
+
 ### Security
 - Rate limiting: 10 req/min per IP
 - URL validation, SSRF protection (blocks internal IPs/domains)
@@ -43,8 +51,9 @@ Video downloader web tool with multi-platform auto-detection. Deployed on Vercel
 
 ### Known Limitations
 - Instagram/Facebook/Twitter require login cookies for yt-dlp — shows friendly error on Vercel
-- Vercel free tier: 10s function timeout (proxy approach bypasses this)
+- Vercel free tier: 60s function timeout (parallel HLS download fits within this)
 - No JS runtime on server — YouTube some formats may be missing
+- HLS output is .ts format (MPEG-TS), playable in VLC and most modern players
 
 ### Frontend
 - Modal preview with video player after download

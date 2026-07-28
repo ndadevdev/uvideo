@@ -187,6 +187,17 @@ def handle_protected(url, output=None):
     r3 = requests.get(stream_url, headers={**headers, 'Referer': iframe_url}, timeout=15)
 
     all_urls = re.findall(r'https?://[^\s"\'<>]+', r3.text)
+    title_match = re.search(r'<title>([^<]+)</title>', r3.text)
+    title = title_match.group(1).strip() if title_match else 'video'
+
+    # Check for HLS stream first
+    for u in all_urls:
+        if 'm3u8' in u.lower():
+            print("[protected] HLS stream detected, downloading segments...")
+            filename = output or (sanitize_filename(title) + '.ts')
+            return download_hls(u, filename, headers={**headers, 'Referer': stream_url})
+
+    # Fallback to direct mp4
     video_url = None
     for u in all_urls:
         if any(x in u for x in ['mp4', 'overfetch', 'cdn']):
@@ -197,9 +208,98 @@ def handle_protected(url, output=None):
     if not video_url:
         raise Exception("URL video tidak ditemukan")
 
-    filename = output or get_filename_from_url(video_url)
-    print(f"[protected] Downloading...")
+    filename = output or (sanitize_filename(title) + '.mp4')
+    print("[protected] Downloading...")
     return download_direct(video_url, filename, referer=stream_url)
+
+
+def download_hls(master_url, output, headers=None):
+    """Download HLS: parallel segment download + merge."""
+    try:
+        import requests
+    except ImportError:
+        subprocess.run([sys.executable, '-m', 'pip', 'install', 'requests'], check=True)
+        import requests
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    if not headers:
+        headers = {'User-Agent': UA}
+
+    print("[hls] Fetch master m3u8...")
+    r = requests.get(master_url, headers=headers, timeout=15)
+    r.raise_for_status()
+    base_url = master_url.rsplit('/', 1)[0] + '/'
+
+    lines = r.text.strip().split('\n')
+    best_sub = None
+    best_height = 0
+    for i, line in enumerate(lines):
+        m = re.search(r'RESOLUTION=\d+x(\d+)', line)
+        if m:
+            height = int(m.group(1))
+            if i + 1 < len(lines) and not lines[i + 1].startswith('#'):
+                if height > best_height:
+                    best_height = height
+                    best_sub = lines[i + 1].strip()
+
+    if not best_sub:
+        for line in reversed(lines):
+            line = line.strip()
+            if line and not line.startswith('#'):
+                best_sub = line
+                break
+
+    sub_url = base_url + best_sub if not best_sub.startswith('http') else best_sub
+    print(f"[hls] Best quality: {best_sub} ({best_height}p)")
+
+    r2 = requests.get(sub_url, headers=headers, timeout=15)
+    r2.raise_for_status()
+
+    segments = [l.strip() for l in r2.text.strip().split('\n') if l.strip() and not l.startswith('#')]
+    print(f"[hls] Segments: {len(segments)}")
+
+    seg_base = sub_url.rsplit('/', 1)[0] + '/'
+
+    def download_seg(idx_name):
+        idx, seg = idx_name
+        seg_url = seg if seg.startswith('http') else seg_base + seg
+        for attempt in range(3):
+            try:
+                sr = requests.get(seg_url, headers=headers, timeout=30)
+                sr.raise_for_status()
+                return idx, sr.content
+            except Exception as e:
+                if attempt == 2:
+                    raise Exception(f"Segment {seg} gagal: {e}")
+                import time
+                time.sleep(1)
+
+    print(f"[hls] Downloading {len(segments)} segments (parallel 10)...")
+    results = {}
+    done = 0
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        futures = {pool.submit(download_seg, (i, s)): i for i, s in enumerate(segments)}
+        for future in as_completed(futures):
+            idx, data = future.result()
+            results[idx] = data
+            done += 1
+            pct = (done / len(segments)) * 100
+            size = sum(len(v) for v in results.values())
+            print(f"\r  [{done}/{len(segments)}] {pct:.0f}% ({format_size(size)})", end='', flush=True)
+
+    filepath = Path(output)
+    counter = 1
+    while filepath.exists():
+        filepath = Path(f"{filepath.stem}_{counter}{filepath.suffix}")
+        counter += 1
+
+    with open(filepath, 'wb') as f:
+        for i in range(len(segments)):
+            f.write(results[i])
+
+    print()
+    print(f"Selesai: {filepath} ({format_size(filepath.stat().st_size)})")
+    return filepath
 
 
 def handle_youtube(url, output=None):
