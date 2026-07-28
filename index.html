@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>uVideo - Download Video</title>
+    <title>uVideo</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+
         * {
             margin: 0;
             padding: 0;
@@ -12,76 +14,169 @@
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: #0a0a0a;
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 100;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+
+        .glow-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00ff88, transparent);
+            animation: scan 4s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(100vh); opacity: 0; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             padding: 40px 20px;
-            color: #fff;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
         }
 
         .logo {
-            font-size: 32px;
+            font-family: 'Space Mono', monospace;
+            font-size: 72px;
             font-weight: 700;
-            letter-spacing: -1px;
+            letter-spacing: -3px;
+            line-height: 1;
             margin-bottom: 8px;
+            position: relative;
         }
 
-        .logo span {
+        .logo::after {
+            content: '_';
             color: #00ff88;
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
         }
 
         .tagline {
-            color: #666;
+            font-family: 'Space Mono', monospace;
             font-size: 14px;
-            margin-bottom: 40px;
+            color: #444;
+            letter-spacing: 4px;
+            text-transform: uppercase;
         }
 
-        .box {
+        .main-box {
             width: 100%;
-            max-width: 520px;
+            max-width: 600px;
+            position: relative;
         }
 
-        .input-row {
+        .input-wrapper {
+            position: relative;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            padding: 4px;
             display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
+            gap: 4px;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: #00ff88;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+        }
+
+        .prefix {
+            font-family: 'Space Mono', monospace;
+            color: #00ff88;
+            padding: 12px 0 12px 16px;
+            font-size: 14px;
+            user-select: none;
         }
 
         input[type="text"] {
             flex: 1;
-            padding: 14px 16px;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
+            background: transparent;
+            border: none;
             color: #fff;
-            font-size: 15px;
-            font-family: 'Cascadia Code', 'Fira Code', monospace;
-        }
-
-        input[type="text"]:focus {
+            font-family: 'Space Mono', monospace;
+            font-size: 14px;
+            padding: 12px;
             outline: none;
-            border-color: #00ff88;
         }
 
         input[type="text"]::placeholder {
-            color: #555;
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: #333;
         }
 
         .btn {
-            padding: 14px 24px;
+            font-family: 'Space Mono', monospace;
+            padding: 12px 24px;
             background: #00ff88;
             color: #000;
             border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 700;
             cursor: pointer;
-            white-space: nowrap;
-            transition: background 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
@@ -89,162 +184,437 @@
         }
 
         .btn:disabled {
-            background: #333;
-            color: #666;
+            background: #1a1a1a;
+            color: #444;
             cursor: wait;
         }
 
-        .msg {
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 14px;
+        .btn:disabled::before {
             display: none;
         }
 
-        .msg.show {
+        /* Progress Section */
+        .progress-section {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-section.show {
             display: block;
         }
 
-        .msg.loading {
-            background: #1a1a2e;
-            color: #4fc3f7;
-            border: 1px solid #233;
-        }
-
-        .msg.ok {
-            background: #0a1f0a;
-            color: #00ff88;
-            border: 1px solid #1a3a1a;
-        }
-
-        .msg.err {
-            background: #1f0a0a;
-            color: #ff5555;
-            border: 1px solid #3a1a1a;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid #234;
-            border-top-color: #4fc3f7;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .help {
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid #1a1a1a;
-        }
-
-        .help h3 {
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Space Mono', monospace;
             font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .progress-file {
+            color: #666;
+            max-width: 70%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .progress-percent {
+            color: #00ff88;
+            font-weight: 700;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: #1a1a1a;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #00ff88;
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                rgba(255,255,255,0.4) 50%, 
+                transparent 100%);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: #444;
+            margin-top: 8px;
+        }
+
+        .progress-speed {
+            color: #00ff88;
+        }
+
+        /* Log Output */
+        .log-output {
+            margin-top: 16px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            padding: 16px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .log-output.show {
+            display: block;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+            line-height: 1.5;
+        }
+
+        .log-line .time {
+            color: #333;
+        }
+
+        .log-line .msg {
+            color: #666;
+        }
+
+        .log-line .msg.ok {
+            color: #00ff88;
+        }
+
+        .log-line .msg.err {
+            color: #ff3333;
+        }
+
+        .log-line .msg.info {
+            color: #4fc3f7;
+        }
+
+        .log-line .msg.warn {
+            color: #ffaa00;
+        }
+
+        /* Status */
+        .status {
+            margin-top: 16px;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            padding: 16px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.ok {
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+
+        .status.err {
+            border-color: #ff3333;
+            color: #ff3333;
+        }
+
+        .cursor-blink {
+            animation: blink 0.7s step-end infinite;
+        }
+
+        .stats {
+            margin-top: 40px;
+            display: flex;
+            gap: 40px;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #00ff88;
+        }
+
+        .stat-label {
+            font-size: 11px;
             color: #444;
             text-transform: uppercase;
             letter-spacing: 2px;
-            margin-bottom: 16px;
-        }
-
-        .help ul {
-            list-style: none;
-        }
-
-        .help li {
-            font-size: 13px;
-            color: #555;
-            padding: 6px 0;
-        }
-
-        .help li::before {
-            content: "→ ";
-            color: #333;
+            margin-top: 4px;
         }
 
         .footer {
-            margin-top: auto;
-            padding-top: 60px;
-            font-size: 12px;
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
             color: #333;
+            letter-spacing: 2px;
         }
 
-        .footer a {
-            color: #444;
-            text-decoration: none;
-        }
-
-        .footer a:hover {
+        .footer span {
             color: #00ff88;
+        }
+
+        .corner {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border-color: #222;
+            border-style: solid;
+            border-width: 0;
+        }
+
+        .corner.tl { top: 20px; left: 20px; border-top-width: 1px; border-left-width: 1px; }
+        .corner.tr { top: 20px; right: 20px; border-top-width: 1px; border-right-width: 1px; }
+        .corner.bl { bottom: 20px; left: 20px; border-bottom-width: 1px; border-left-width: 1px; }
+        .corner.br { bottom: 20px; right: 20px; border-bottom-width: 1px; border-right-width: 1px; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
         }
     </style>
 </head>
 <body>
-    <div class="logo">u<span>Video</span></div>
-    <p class="tagline">paste url, dapet video</p>
+    <div class="noise"></div>
+    <div class="grid-bg"></div>
+    <div class="glow-line"></div>
 
-    <div class="box">
-        <form id="form">
-            <div class="input-row">
-                <input type="text" id="url" placeholder="https://example.com/video.mp4" autocomplete="off" spellcheck="false">
-                <button type="submit" class="btn" id="btn">Download</button>
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <div class="container">
+        <div class="header">
+            <div class="logo">uVideo</div>
+            <div class="tagline">video downloader</div>
+        </div>
+
+        <div class="main-box">
+            <div class="input-wrapper">
+                <span class="prefix">~$</span>
+                <input type="text" id="url" placeholder="paste url video disini..." autocomplete="off" spellcheck="false">
+                <button class="btn" id="btn">ambil</button>
             </div>
-        </form>
-        <div id="msg" class="msg"></div>
 
-        <div class="help">
-            <h3>Cara pakai</h3>
-            <ul>
-                <li>Copy URL video yang mau didownload</li>
-                <li>Paste di kolom atas, klik Download</li>
-                <li>File langsung tersimpan ke device lo</li>
-            </ul>
+            <!-- Progress Section -->
+            <div class="progress-section" id="progress-section">
+                <div class="progress-header">
+                    <span class="progress-file" id="progress-file">video.mp4</span>
+                    <span class="progress-percent" id="progress-percent">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <div class="progress-info">
+                    <span id="progress-size">0 MB / 0 MB</span>
+                    <span class="progress-speed" id="progress-speed">0 MB/s</span>
+                </div>
+            </div>
+
+            <!-- Log Output -->
+            <div class="log-output" id="log-output"></div>
+
+            <!-- Status -->
+            <div id="status" class="status">
+                <span class="cursor-blink">█</span> <span id="status-text"></span>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="count">0</div>
+                <div class="stat-label">downloaded</div>
+            </div>
         </div>
     </div>
 
     <div class="footer">
-        built with python + vercel
+        <span>u</span>video <span>//</span> <span>v</span>1.0
     </div>
 
     <script>
-        const form = document.getElementById('form');
         const urlInput = document.getElementById('url');
         const btn = document.getElementById('btn');
-        const msg = document.getElementById('msg');
+        const progressSection = document.getElementById('progress-section');
+        const progressFile = document.getElementById('progress-file');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressBar = document.getElementById('progress-bar');
+        const progressSize = document.getElementById('progress-size');
+        const progressSpeed = document.getElementById('progress-speed');
+        const logOutput = document.getElementById('log-output');
+        const status = document.getElementById('status');
+        const statusText = document.getElementById('status-text');
+        const countEl = document.getElementById('count');
+        let count = 0;
+        let logLines = [];
 
-        function setMsg(type, text) {
-            msg.className = 'msg show ' + type;
-            msg.innerHTML = type === 'loading' 
-                ? '<span class="spinner"></span>' + text 
-                : text;
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        function addLog(msg, type = 'default') {
+            const time = new Date().toLocaleTimeString('id-ID', { hour12: false });
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.innerHTML = `<span class="time">[${time}]</span> <span class="msg ${type}">${msg}</span>`;
+            logOutput.appendChild(line);
+            logOutput.scrollTop = logOutput.scrollHeight;
+            logLines.push(line);
+            
+            // Keep only last 50 lines
+            if (logLines.length > 50) {
+                const old = logLines.shift();
+                old.remove();
+            }
+        }
+
+        function clearLog() {
+            logOutput.innerHTML = '';
+            logLines = [];
+        }
+
+        function setStatus(type, text) {
+            status.className = 'status show ' + type;
+            statusText.textContent = text;
+        }
+
+        function showProgress(filename) {
+            progressFile.textContent = filename;
+            progressPercent.textContent = '0%';
+            progressBar.style.width = '0%';
+            progressSize.textContent = '0 MB / ...';
+            progressSpeed.textContent = '0 MB/s';
+            progressSection.classList.add('show');
+        }
+
+        function updateProgress(percent, downloaded, total, speed) {
+            progressBar.style.width = percent + '%';
+            progressPercent.textContent = Math.round(percent) + '%';
+            progressSize.textContent = formatBytes(downloaded) + ' / ' + (total ? formatBytes(total) : '...');
+            progressSpeed.textContent = formatBytes(speed) + '/s';
+        }
+
+        function hideProgress() {
+            progressSection.classList.remove('show');
+        }
+
+        // Simulate progress for streaming download
+        function startFakeProgress(filename, totalSize) {
+            let downloaded = 0;
+            let speed = 0;
+            const startTime = Date.now();
+            
+            const interval = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                
+                // Simulate decreasing speed over time
+                if (elapsed < 1) {
+                    speed = totalSize * 0.3;
+                } else if (elapsed < 3) {
+                    speed = totalSize * 0.1;
+                } else {
+                    speed = totalSize * 0.02 + Math.random() * totalSize * 0.01;
+                }
+                
+                downloaded += speed * 0.5;
+                
+                if (totalSize) {
+                    const percent = Math.min((downloaded / totalSize) * 100, 99);
+                    updateProgress(percent, downloaded, totalSize, speed);
+                } else {
+                    // Unknown size - just show downloaded
+                    updateProgress(Math.min(downloaded / (10 * 1024 * 1024) * 100, 99), downloaded, null, speed);
+                }
+            }, 500);
+            
+            return {
+                stop: () => {
+                    clearInterval(interval);
+                    updateProgress(100, downloaded, totalSize, 0);
+                }
+            };
+        }
+
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') btn.click();
+        });
+
+        btn.addEventListener('click', async () => {
             const url = urlInput.value.trim();
             if (!url) return;
 
-            try { new URL(url); } catch { 
-                setMsg('err', 'url ga valid');
+            try { new URL(url); } catch {
+                setStatus('err', 'url invalid');
                 return;
             }
 
             btn.disabled = true;
             btn.textContent = '...';
-            setMsg('loading', 'lagi proses');
+            clearLog();
+            hideProgress();
+            status.className = 'status';
+
+            addLog('memulai download...', 'info');
+            addLog('url: ' + url, 'default');
+
+            let fakeProgress = null;
 
             try {
+                // First try to get file info with HEAD request
+                addLog('mendapatkan info file...', 'info');
+                
                 const res = await fetch('/api/download?url=' + encodeURIComponent(url));
 
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({ error: 'error' }));
-                    throw new Error(err.error || 'gagal download');
+                    throw new Error(err.error || 'gagal');
                 }
 
                 const disp = res.headers.get('Content-Disposition');
@@ -254,21 +624,50 @@
                     if (m) name = m[1];
                 }
 
+                const contentLength = res.headers.get('Content-Length');
+                const totalSize = contentLength ? parseInt(contentLength) : null;
+
+                addLog('file: ' + name, 'ok');
+                if (totalSize) {
+                    addLog('ukuran: ' + formatBytes(totalSize), 'info');
+                } else {
+                    addLog('ukuran: tidak diketahui', 'warn');
+                }
+
+                addLog('mulai download...', 'info');
+                showProgress(name);
+
+                // Start fake progress
+                fakeProgress = startFakeProgress(name, totalSize || 10 * 1024 * 1024);
+
+                // Download the actual file
                 const blob = await res.blob();
+                
+                // Stop fake progress
+                if (fakeProgress) fakeProgress.stop();
+
+                addLog('download selesai!', 'ok');
+                addLog('ukuran file: ' + formatBytes(blob.size), 'info');
+
+                // Start download
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = name;
                 a.click();
                 URL.revokeObjectURL(a.href);
 
-                setMsg('ok', 'done — ' + name);
+                count++;
+                countEl.textContent = count;
+                setStatus('ok', 'done — ' + name);
                 urlInput.value = '';
 
             } catch (err) {
-                setMsg('err', err.message || 'ada error');
+                if (fakeProgress) fakeProgress.stop();
+                addLog('error: ' + err.message, 'err');
+                setStatus('err', err.message || 'error');
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Download';
+                btn.textContent = 'ambil';
             }
         });
     </script>
