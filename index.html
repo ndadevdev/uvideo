@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>uVideo</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap');
@@ -15,10 +19,9 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background: #f5f5f0;
+            background: #f0f0f0;
             min-height: 100vh;
             color: #1a1a1a;
-            overflow-x: hidden;
         }
 
         .grid-bg {
@@ -28,9 +31,9 @@
             width: 100%;
             height: 100%;
             background-image: 
-                linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
+                linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
             pointer-events: none;
         }
 
@@ -42,7 +45,7 @@
             height: 2px;
             background: linear-gradient(90deg, transparent, #2563eb, transparent);
             animation: scan 6s linear infinite;
-            opacity: 0.6;
+            opacity: 0.5;
         }
 
         @keyframes scan {
@@ -63,12 +66,12 @@
 
         .header {
             text-align: center;
-            margin-bottom: 48px;
+            margin-bottom: 40px;
         }
 
         .logo {
             font-family: 'Space Mono', monospace;
-            font-size: 64px;
+            font-size: 56px;
             font-weight: 700;
             letter-spacing: -2px;
             line-height: 1;
@@ -93,37 +96,50 @@
 
         .tagline {
             font-family: 'Space Mono', monospace;
-            font-size: 13px;
-            color: #888;
+            font-size: 12px;
+            color: #777;
             letter-spacing: 3px;
             text-transform: uppercase;
         }
 
-        .main-box {
+        .card {
             width: 100%;
-            max-width: 580px;
-        }
-
-        .input-wrapper {
+            max-width: 560px;
             background: #fff;
-            border: 2px solid #e0e0e0;
-            padding: 6px;
-            display: flex;
-            gap: 6px;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            border: 1px solid #d0d0d0;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
         }
 
-        .input-wrapper:focus-within {
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .input-box {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #f8f8f8;
+            border: 2px solid #d0d0d0;
+            border-radius: 6px;
+            padding: 0 12px;
+            transition: border-color 0.2s;
+        }
+
+        .input-box:focus-within {
             border-color: #2563eb;
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
         }
 
         .prefix {
             font-family: 'Space Mono', monospace;
             color: #2563eb;
-            padding: 12px 0 12px 16px;
             font-size: 14px;
+            font-weight: 700;
             user-select: none;
+            margin-right: 4px;
         }
 
         input[type="text"] {
@@ -132,69 +148,75 @@
             border: none;
             color: #1a1a1a;
             font-family: 'Space Mono', monospace;
-            font-size: 14px;
-            padding: 12px;
+            font-size: 13px;
+            padding: 14px 8px;
             outline: none;
+            width: 100%;
         }
 
         input[type="text"]::placeholder {
-            color: #aaa;
+            color: #999;
         }
 
         .btn-paste {
             font-family: 'Space Mono', monospace;
-            padding: 12px 16px;
-            background: #e5e5e5;
+            padding: 14px 14px;
+            background: #e8e8e8;
             color: #555;
-            border: none;
-            font-size: 13px;
+            border: 2px solid #d0d0d0;
+            border-radius: 6px;
+            font-size: 12px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 6px;
+            white-space: nowrap;
         }
 
         .btn-paste:hover {
-            background: #d4d4d4;
+            background: #ddd;
+            border-color: #bbb;
         }
 
         .btn-paste svg {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
         }
 
-        .btn {
+        .btn-dl {
             font-family: 'Space Mono', monospace;
-            padding: 12px 24px;
+            padding: 14px 20px;
             background: #2563eb;
             color: #fff;
             border: none;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: 700;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 1px;
-            transition: background 0.2s, transform 0.1s;
+            transition: background 0.2s;
+            white-space: nowrap;
         }
 
-        .btn:hover {
+        .btn-dl:hover {
             background: #1d4ed8;
         }
 
-        .btn:active {
+        .btn-dl:active {
             transform: scale(0.98);
         }
 
-        .btn:disabled {
-            background: #ccc;
+        .btn-dl:disabled {
+            background: #bbb;
             color: #888;
             cursor: wait;
         }
 
         /* Progress */
         .progress-section {
-            margin-top: 20px;
+            margin-top: 16px;
             display: none;
         }
 
@@ -225,8 +247,9 @@
 
         .progress-bar-bg {
             width: 100%;
-            height: 8px;
-            background: #e5e5e5;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
             overflow: hidden;
         }
 
@@ -235,6 +258,7 @@
             background: #2563eb;
             width: 0%;
             transition: width 0.3s ease;
+            border-radius: 3px;
         }
 
         .progress-info {
@@ -252,13 +276,14 @@
 
         /* Log */
         .log-output {
-            margin-top: 16px;
-            background: #fff;
+            margin-top: 12px;
+            background: #f8f8f8;
             border: 1px solid #e0e0e0;
-            padding: 16px;
+            border-radius: 6px;
+            padding: 12px;
             font-family: 'Space Mono', monospace;
-            font-size: 12px;
-            max-height: 150px;
+            font-size: 11px;
+            max-height: 120px;
             overflow-y: auto;
             display: none;
         }
@@ -268,7 +293,7 @@
         }
 
         .log-line {
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             line-height: 1.5;
         }
 
@@ -280,82 +305,60 @@
             color: #666;
         }
 
-        .log-line .msg.ok {
-            color: #16a34a;
-        }
-
-        .log-line .msg.err {
-            color: #dc2626;
-        }
-
-        .log-line .msg.info {
-            color: #2563eb;
-        }
-
-        .log-line .msg.warn {
-            color: #d97706;
-        }
+        .log-line .msg.ok { color: #16a34a; }
+        .log-line .msg.err { color: #dc2626; }
+        .log-line .msg.info { color: #2563eb; }
+        .log-line .msg.warn { color: #d97706; }
 
         /* Status */
         .status {
-            margin-top: 16px;
+            margin-top: 12px;
             font-family: 'Space Mono', monospace;
-            font-size: 13px;
-            padding: 16px;
-            background: #fff;
+            font-size: 12px;
+            padding: 12px;
+            background: #f8f8f8;
             border: 1px solid #e0e0e0;
+            border-radius: 6px;
             display: none;
         }
 
-        .status.show {
-            display: block;
-        }
-
-        .status.ok {
-            border-color: #16a34a;
-            color: #16a34a;
-        }
-
-        .status.err {
-            border-color: #dc2626;
-            color: #dc2626;
-        }
+        .status.show { display: block; }
+        .status.ok { border-color: #16a34a; color: #16a34a; }
+        .status.err { border-color: #dc2626; color: #dc2626; }
 
         .cursor-blink {
             animation: blink 0.7s step-end infinite;
         }
 
         .stats {
-            margin-top: 40px;
+            margin-top: 32px;
             font-family: 'Space Mono', monospace;
         }
 
-        .stat {
-            text-align: center;
-        }
+        .stat { text-align: center; }
 
         .stat-value {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
             color: #2563eb;
         }
 
         .stat-label {
-            font-size: 11px;
+            font-size: 10px;
             color: #888;
             text-transform: uppercase;
             letter-spacing: 2px;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .footer {
             position: fixed;
-            bottom: 20px;
+            bottom: 16px;
             left: 0;
             width: 100%;
             text-align: center;
             font-family: 'Space Mono', monospace;
-            font-size: 11px;
+            font-size: 10px;
             color: #bbb;
             letter-spacing: 2px;
         }
@@ -365,41 +368,49 @@
             color: #2563eb;
         }
 
-        .corner {
-            position: fixed;
-            width: 20px;
-            height: 20px;
-            border-color: #ddd;
-            border-style: solid;
-            border-width: 0;
+        /* Running Text */
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            background: #2563eb;
+            padding: 10px 0;
+            margin-top: 24px;
+            border-radius: 6px;
         }
 
-        .corner.tl { top: 20px; left: 20px; border-top-width: 1px; border-left-width: 1px; }
-        .corner.tr { top: 20px; right: 20px; border-top-width: 1px; border-right-width: 1px; }
-        .corner.bl { bottom: 20px; left: 20px; border-bottom-width: 1px; border-left-width: 1px; }
-        .corner.br { bottom: 20px; right: 20px; border-bottom-width: 1px; border-right-width: 1px; }
-
-        ::-webkit-scrollbar {
-            width: 4px;
+        .ticker {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker 20s linear infinite;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            color: #fff;
+            letter-spacing: 1px;
         }
 
-        ::-webkit-scrollbar-track {
-            background: transparent;
+        .ticker span {
+            margin: 0 24px;
+            opacity: 0.9;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: #ddd;
+        .ticker span::before {
+            content: '✦ ';
+            opacity: 0.5;
         }
+
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
     </style>
 </head>
 <body>
     <div class="grid-bg"></div>
     <div class="scan-line"></div>
-
-    <div class="corner tl"></div>
-    <div class="corner tr"></div>
-    <div class="corner bl"></div>
-    <div class="corner br"></div>
 
     <div class="container">
         <div class="header">
@@ -407,15 +418,17 @@
             <div class="tagline">video downloader</div>
         </div>
 
-        <div class="main-box">
-            <div class="input-wrapper">
-                <span class="prefix">~$</span>
-                <input type="text" id="url" placeholder="paste url video disini..." autocomplete="off" spellcheck="false">
+        <div class="card">
+            <div class="input-row">
+                <div class="input-box">
+                    <span class="prefix">~$</span>
+                    <input type="text" id="url" placeholder="paste url video disini..." autocomplete="off" spellcheck="false">
+                </div>
                 <button class="btn-paste" id="btn-paste" type="button" title="Paste dari clipboard">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
                     paste
                 </button>
-                <button class="btn" id="btn">ambil</button>
+                <button class="btn-dl" id="btn">ambil</button>
             </div>
 
             <div class="progress-section" id="progress-section">
@@ -443,6 +456,29 @@
             <div class="stat">
                 <div class="stat-value" id="count">0</div>
                 <div class="stat-label">downloaded</div>
+            </div>
+        </div>
+
+        <div class="ticker-wrap">
+            <div class="ticker">
+                <span>YouTube</span>
+                <span>Facebook</span>
+                <span>Instagram</span>
+                <span>TikTok</span>
+                <span>Twitter / X</span>
+                <span>Vimeo</span>
+                <span>DailyMotion</span>
+                <span>VidY</span>
+                <span>Direct MP4 URL</span>
+                <span>YouTube</span>
+                <span>Facebook</span>
+                <span>Instagram</span>
+                <span>TikTok</span>
+                <span>Twitter / X</span>
+                <span>Vimeo</span>
+                <span>DailyMotion</span>
+                <span>VidY</span>
+                <span>Direct MP4 URL</span>
             </div>
         </div>
     </div>
