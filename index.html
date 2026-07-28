@@ -127,6 +127,7 @@
             border-radius: 6px;
             padding: 0 12px;
             transition: border-color 0.2s;
+            position: relative;
         }
 
         .input-box:focus-within {
@@ -150,12 +151,42 @@
             font-family: 'Space Mono', monospace;
             font-size: 13px;
             padding: 14px 8px;
+            padding-right: 28px;
             outline: none;
             width: 100%;
         }
 
         input[type="text"]::placeholder {
             color: #999;
+        }
+
+        .btn-clear {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background: #ccc;
+            color: #666;
+            border: none;
+            border-radius: 50%;
+            font-size: 12px;
+            line-height: 20px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+            padding: 0;
+            transition: background 0.2s;
+        }
+
+        .btn-clear:hover {
+            background: #aaa;
+            color: #fff;
+        }
+
+        .input-box:has(input:not(:placeholder-shown)) .btn-clear {
+            display: block;
         }
 
         .btn-paste {
@@ -671,6 +702,7 @@
                 <div class="input-box">
                     <span class="prefix">~$</span>
                     <input type="text" id="url" placeholder="paste url video disini..." autocomplete="off" spellcheck="false">
+                    <button class="btn-clear" id="btn-clear" type="button" title="Clear">&times;</button>
                 </div>
                 <button class="btn-paste" id="btn-paste" type="button" title="Paste dari clipboard">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
@@ -762,6 +794,7 @@
         const urlInput = document.getElementById('url');
         const btn = document.getElementById('btn');
         const btnPaste = document.getElementById('btn-paste');
+        const btnClear = document.getElementById('btn-clear');
         const progressSection = document.getElementById('progress-section');
         const progressFile = document.getElementById('progress-file');
         const progressPercent = document.getElementById('progress-percent');
@@ -836,11 +869,29 @@
             progressSection.classList.remove('show');
         }
 
-        function showModal(blob, filename) {
+        function getMimeType(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const types = {
+                'mp4': 'video/mp4',
+                'webm': 'video/webm',
+                'mkv': 'video/x-matroska',
+                'avi': 'video/x-msvideo',
+                'mov': 'video/quicktime',
+                'ts': 'video/mp2t',
+                'm3u8': 'video/mp2t',
+                'flv': 'video/x-flv',
+            };
+            return types[ext] || 'video/mp4';
+        }
+
+        async function showModal(blob, filename) {
             currentBlob = blob;
             currentFilename = filename;
-            const url = URL.createObjectURL(blob);
+            const mime = getMimeType(filename);
+            const typedBlob = new Blob([await blob.arrayBuffer()], { type: mime });
+            const url = URL.createObjectURL(typedBlob);
             modalVideo.src = url;
+            modalVideo.load();
             modalFilename.textContent = filename;
             modalSize.textContent = formatBytes(blob.size);
             modalOverlay.classList.add('show');
@@ -934,6 +985,11 @@
             } catch {
                 urlInput.focus();
             }
+        });
+
+        btnClear.addEventListener('click', () => {
+            urlInput.value = '';
+            urlInput.focus();
         });
 
         btn.addEventListener('click', async () => {
