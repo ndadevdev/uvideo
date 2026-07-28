@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="#">Live Demo</a> · 
+  <a href="https://uvideo.ndadev.my.id/">Live Demo</a> · 
   <a href="https://github.com/ndadevdev/uvideo/issues">Report Bug</a> · 
   <a href="https://github.com/ndadevdev/uvideo/issues">Request Feature</a>
 </p>
