@@ -406,6 +406,119 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+
+        /* ─── Responsive ─── */
+
+        /* Tablet */
+        @media (max-width: 768px) {
+            .container {
+                padding: 24px 16px;
+            }
+
+            .logo {
+                font-size: 44px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px 12px;
+                justify-content: flex-start;
+                padding-top: 40px;
+            }
+
+            .header {
+                margin-bottom: 24px;
+            }
+
+            .logo {
+                font-size: 36px;
+                letter-spacing: -1px;
+            }
+
+            .tagline {
+                font-size: 10px;
+                letter-spacing: 2px;
+            }
+
+            .card {
+                padding: 16px;
+                border-radius: 6px;
+            }
+
+            .input-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .input-box {
+                width: 100%;
+            }
+
+            .input-row .btn-paste,
+            .input-row .btn-dl {
+                width: 100%;
+                justify-content: center;
+                padding: 12px;
+            }
+
+            input[type="text"] {
+                font-size: 14px;
+                padding: 14px 8px;
+            }
+
+            .progress-header {
+                font-size: 11px;
+            }
+
+            .progress-info {
+                font-size: 10px;
+            }
+
+            .log-output {
+                font-size: 10px;
+                max-height: 100px;
+            }
+
+            .status {
+                font-size: 11px;
+            }
+
+            .ticker {
+                font-size: 11px;
+            }
+
+            .ticker span {
+                margin: 0 16px;
+            }
+
+            .footer {
+                position: relative;
+                bottom: auto;
+                padding: 16px;
+                font-size: 9px;
+            }
+        }
+
+        /* Small mobile */
+        @media (max-width: 360px) {
+            .logo {
+                font-size: 30px;
+            }
+
+            .card {
+                padding: 12px;
+            }
+
+            .btn-paste svg {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
