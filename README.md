@@ -86,7 +86,6 @@ vercel dev
 
 - Instagram & Facebook butuh autentikasi untuk download video tertentu
 - Format output dari vdy.to berupa .ts (MPEG-TS), playable di VLC dan browser modern
-- Vercel free tier punya timeout 60 detik, tapi udah dioptimasi buat handle ini
 
 ### License
 
@@ -94,4 +93,4 @@ MIT
 
 ---
 
-Dibuat oleh [ndadev](https://github.com/ndadevdev) dengan bantuan [OpenCode](https://opencode.ai)
+Dibuat oleh [ndadev](https://github.com/ndadevdev) & [OpenCode](https://opencode.ai) 🤙
